@@ -230,7 +230,7 @@
 
 <footer>
   <p>© Autocentrum Halle, Inh. Daniel Oehme · Zscherbener Landstraße 17 · 06126 Halle (Saale)</p>
-  <p><a href="../impressum.html">Impressum</a> · <a href="../datenschutz.html">Datenschutz</a> · <a href="../kontakt.html">Kontakt</a> · <a href="../wartung/index.html" target="_blank" rel="noopener noreferrer">Wartung</a></p>
+  <p><a href="../impressum.html">Impressum</a> · <a href="../datenschutz.html">Datenschutz</a> · <a href="../kontakt.html">Kontakt</a> · <a href="https://autocentrum-halle-api.immerzu.workers.dev/wartung/" target="_blank" rel="noopener noreferrer">Wartung</a></p>
   <!-- v151 (2026-09-26): Newsletter — reine Netlify-Forms-Erfassung der Adresse.
        KEIN Doppel-Opt-In und KEIN automatischer Versand; die Adressen werden im
        Netlify-Formular "newsletter" gesammelt und von Hand ausgewertet. -->
@@ -782,7 +782,7 @@
          angemeldet ist — /api/eintraege liefert ihm die interne Liste. */
       /* v126: cache 'no-store' — die Antwort hat max-age=30. Ohne das zeigte die
          Seite nach einer Änderung im Wartungsbereich bis zu 30 s den alten Stand. */
-      fetch('/api/veroeffentlicht', { headers: { accept: 'application/json' }, cache: 'no-store' })
+      fetch('https://autocentrum-halle-api.immerzu.workers.dev/api/veroeffentlicht', { headers: { accept: 'application/json' }, cache: 'no-store' })
         .then(function (a) { return a.ok ? a.json() : null; })
         .then(function (d) {
           if (!d || d.ok !== true) { ankuendigungAusDatei(); return; }
