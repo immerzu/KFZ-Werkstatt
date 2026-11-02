@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Klimaservice in Halle (Saale) – Autocentrum Halle</title>
 <meta name="description" content="Klimaservice in Halle (Saale): Wartung, Dichtheitsprüfung, Desinfektion des Klimakreislaufs. KFZ-Meisterwerkstatt Autocentrum Halle, Zscherbener Landstraße 17, Tel. 0345 6786691.">
-<!-- v112: Solange die Seite als Testinstanz auf netlify.app laeuft, soll sie nicht in
-     Suchmaschinen erscheinen (sonst doppelter Inhalt zur spaeteren echten Domain).
-     Vor dem Live-Gang auf autocentrum-halle.de wieder auf "index, follow" stellen. -->
+<!-- Bis zur erneuten öffentlichen Freigabe bleibt die Website auf "noindex, nofollow". Vor dem Live-Gang auf autocentrum-halle.de auf "index, follow" stellen. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#1c2536">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='12'%20fill='%231c2536'/%3E%3Ctext%20x='32'%20y='41'%20font-family='Arial,Helvetica,sans-serif'%20font-size='26'%20font-weight='700'%20fill='%23e30613'%20text-anchor='middle'%3EAC%3C/text%3E%3C/svg%3E">
@@ -233,11 +231,10 @@
 <footer>
   <p>© Autocentrum Halle, Inh. Daniel Oehme · Zscherbener Landstraße 17 · 06126 Halle (Saale)</p>
   <p><a href="../impressum.html">Impressum</a> · <a href="../datenschutz.html">Datenschutz</a> · <a href="../kontakt.html">Kontakt</a> · <a href="https://autocentrum-halle-api.immerzu.workers.dev/wartung/" target="_blank" rel="noopener noreferrer">Wartung</a></p>
-  <!-- v151 (2026-09-26): Newsletter — reine Netlify-Forms-Erfassung der Adresse.
+  <!-- v151 (2026-09-26): Newsletter — Speicherung über Cloudflare Worker und D1.
        KEIN Doppel-Opt-In und KEIN automatischer Versand; die Adressen werden im
-       Netlify-Formular "newsletter" gesammelt und von Hand ausgewertet. -->
-  <form class="newsletter-formular" name="newsletter" method="POST"
-        data-netlify="true" data-netlify-honeypot="bot-field" novalidate>
+       geschützten Datenbank gespeichert und von Hand ausgewertet. -->
+  <form class="newsletter-formular" name="newsletter" method="POST" novalidate action="https://autocentrum-halle-api.immerzu.workers.dev/api/formular">
     <input type="hidden" name="form-name" value="newsletter">
     <p class="honeypot-feld" aria-hidden="true">
       <label>Bitte nicht ausfüllen: <input name="bot-field" tabindex="-1" autocomplete="off"></label>
@@ -629,8 +626,7 @@
 
     /* ==== v114: Ankündigung und „Aktuelles" aus dem Wartungsbereich ====
        Die Daten werden nicht mehr in der Seite mitgeliefert, sondern kommen aus
-       dem Wartungsbereich: Netlify Function /api/eintraege, gespeichert in Netlify
-       Blobs. Gelesen wird zur Laufzeit — eine Änderung im Wartungsbereich wirkt
+       dem Wartungsbereich: Cloudflare Worker /api/eintraege, gespeichert in Cloudflare D1. Gelesen wird zur Laufzeit — eine Änderung im Wartungsbereich wirkt
        sofort, ohne neuen Bau und ohne neuen Deploy.
        Antwortet die Function nicht (oder gibt es sie noch nicht), bleibt alles wie
        bisher: keine Ankündigung, kein „Aktuelles", kein Fehler, kein Sprung im
@@ -642,7 +638,7 @@
       var heute = new Date();
       heute.setHours(0, 0, 0, 0);
       /* v142: Ein Beginn in der Zukunft verhindert die Anzeige NICHT — genauso hält es
-         der Server (netlify/lib/eintraege.mjs, istSichtbar). Nur „abgelaufen" und der
+         der Server (eintraege.js, istSichtbar). Nur „abgelaufen" und der
          Schalter nehmen eine Ankündigung von der Seite. „von" steuert allein, ob der
          Öffnungsstatus schon rot wird (Feld laeuft). */
       if (d.bis) {
@@ -1105,7 +1101,6 @@
         }
       });
     }
-
     bereiteStaffelungVor();
     initialisiereReveal();
     initialisiereZoom();
@@ -1117,5 +1112,6 @@
   })();
 </script>
 
+<script src="../formulare.js"></script>
 </body>
 </html>

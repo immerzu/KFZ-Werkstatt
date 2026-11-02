@@ -460,6 +460,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; width: 0; ma
     <div class="w-reiter" role="tablist">
       <button type="button" id="reiter-eintraege" class="ist-aktiv" role="tab" aria-selected="true">Einträge</button>
       <button type="button" id="reiter-ankauf" role="tab" aria-selected="false">Ankauf</button>
+      <button type="button" id="reiter-anfragen" role="tab" aria-selected="false">Anfragen</button>
       <!-- v129: Die Meldung sitzt rechts in der Reiter-Zeile und kostet keine eigene Zeile. -->
       <div class="w-meldung w-meldung-reiter" id="meldung-reiter" hidden></div>
     </div>
@@ -576,6 +577,19 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; width: 0; ma
         <p class="w-leer" id="ankauf-leer" hidden>Es sind noch keine Ankaufsanfragen eingegangen.</p>
       </div>
     </div>
+
+    <!-- v1.5.3: Kontakt-, Rückruf- und Newsletter-Einreichungen aus Cloudflare D1. -->
+    <div id="bereich-anfragen" role="tabpanel" hidden>
+      <div class="w-karte w-karte-verlauf">
+        <h2>Eingegangene Anfragen</h2>
+        <p class="w-hinweis" id="anfragen-hinweis">Anfragen werden geladen …</p>
+        <p class="w-meldung ist-schlecht" id="anfragen-fehler" hidden></p>
+        <ul class="w-liste" id="anfragen-liste"></ul>
+        <p class="w-leer" id="anfragen-leer" hidden>
+          Es sind noch keine Kontakt-, Rückruf- oder Newsletter-Anfragen eingegangen.
+        </p>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -639,7 +653,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; width: 0; ma
      Die Vorlagen schreiben den Zeitraum zusätzlich in den Text. Wird danach nur das
      Datumsfeld geändert, blieb im Text das alte Datum stehen — die Website zeigte es
      an (real aufgetreten). Darum ziehen Text und Zusatz hier automatisch mit. Dieselbe
-     Regel wendet der Server beim Ausliefern an (netlify/lib/eintraege.mjs). */
+     Regel wendet der Server beim Ausliefern an (eintraege.js). */
   function zeitraumSatz(von, bis) {
     if (von && bis) return 'vom ' + datumLesbar(von) + ' bis ' + datumLesbar(bis);
     if (von) return 'ab ' + datumLesbar(von);
@@ -678,7 +692,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; width: 0; ma
   }
 
   /* Der Zusatz so, wie ihn die Website zeigt — dieselbe Regel wie im Server
-     (netlify/lib/eintraege.mjs): ein „ab TT.MM." im Text folgt dem nächsten Werktag
+     (eintraege.js): ein „ab TT.MM." im Text folgt dem nächsten Werktag
      nach `bis`. Damit steht in Vorschau und Verlauf dasselbe wie auf der Startseite. */
   function zusatzAnzeige(zusatz, bis) {
     var roh = String(zusatz == null ? '' : zusatz);
@@ -693,7 +707,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; width: 0; ma
     var bis = $('f-bis').value;
     /* v137: News ist eine Meldung, kein Zeitraum. Ein Datum im Meldungstext wird
        deshalb NICHT umgeschrieben — der Server tut das bei News ebenfalls nicht
-       (netlify/lib/eintraege.mjs, textMitZeitraum nur bei „ankuendigung"). */
+       (eintraege.js, textMitZeitraum nur bei „ankuendigung"). */
     if (!istNews()) {
       var satz = zeitraumSatz(von, bis);
       if (satz) $('f-text').value = ersetzeDatum($('f-text').value, satz);
@@ -908,6 +922,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; width: 0; ma
 
   /* v151 (2026-09-27): Ankaufsanfragen werden erst beim ersten Reiterwechsel geladen. */
   var ankaufGeladen = false;
+  var anfragenGeladen = false;
 
   /* v136: Meldung, die den Ansichtswechsel überleben soll (wird von zeige() gesetzt). */
   var meldungNachWechsel = '';
@@ -988,18 +1003,29 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; width: 0; ma
      v151 (2026-09-27): Zwei Reiter — Einträge (Bearbeiten) und Ankauf (nur ansehen). */
 
   function zeigeReiter(wer) {
+    var istEintraege = wer === 'eintraege';
     var istAnkauf = wer === 'ankauf';
-    $('bereich-eintraege').hidden = istAnkauf;
+    var istAnfragen = wer === 'anfragen';
+
+    $('bereich-eintraege').hidden = !istEintraege;
     $('bereich-ankauf').hidden = !istAnkauf;
-    $('reiter-eintraege').classList.toggle('ist-aktiv', !istAnkauf);
+    $('bereich-anfragen').hidden = !istAnfragen;
+
+    $('reiter-eintraege').classList.toggle('ist-aktiv', istEintraege);
     $('reiter-ankauf').classList.toggle('ist-aktiv', istAnkauf);
-    $('reiter-eintraege').setAttribute('aria-selected', istAnkauf ? 'false' : 'true');
+    $('reiter-anfragen').classList.toggle('ist-aktiv', istAnfragen);
+
+    $('reiter-eintraege').setAttribute('aria-selected', istEintraege ? 'true' : 'false');
     $('reiter-ankauf').setAttribute('aria-selected', istAnkauf ? 'true' : 'false');
+    $('reiter-anfragen').setAttribute('aria-selected', istAnfragen ? 'true' : 'false');
+
     if (istAnkauf && !ankaufGeladen) ladeAnkauf();
+    if (istAnfragen && !anfragenGeladen) ladeAnfragen();
   }
 
   $('reiter-eintraege').addEventListener('click', function () { zeigeReiter('eintraege'); });
   $('reiter-ankauf').addEventListener('click', function () { zeigeReiter('ankauf'); });
+  $('reiter-anfragen').addEventListener('click', function () { zeigeReiter('anfragen'); });
 
   /* ================= Einträge: Formular ================= */
 
@@ -1555,6 +1581,163 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; width: 0; ma
       });
   }
 
+  /* ================= Anfragen: Kontakt, Rückruf, Newsletter ================= */
+
+  function anfrageArtName(art) {
+    if (art === 'kontakt') return 'Kontakt';
+    if (art === 'rueckruf') return 'Rückruf';
+    if (art === 'newsletter') return 'Newsletter';
+    return String(art || 'Anfrage');
+  }
+
+  function zeigeAnfragenFehler(text) {
+    var kasten = $('anfragen-fehler');
+    kasten.textContent = text || '';
+    kasten.hidden = !text;
+    $('anfragen-hinweis').hidden = true;
+  }
+
+  function zeichneAnfragen(daten) {
+    var liste = $('anfragen-liste');
+    var einreichungen = daten.einreichungen || [];
+
+    liste.innerHTML = '';
+    $('anfragen-hinweis').hidden = true;
+    $('anfragen-fehler').hidden = true;
+    $('anfragen-leer').hidden = einreichungen.length > 0;
+
+    einreichungen.forEach(function (e) {
+      var karte = el('li', 'w-ankauf-karte');
+      var inhalt = el('div', 'w-ankauf-inhalt');
+
+      var kopf = el('div', 'w-ankauf-kopf');
+      kopf.appendChild(el('strong', '', anfrageArtName(e.art)));
+
+      var meta = [];
+      if (e.name) meta.push(String(e.name));
+      if (e.erstellt) meta.unshift(zeitLesbar(e.erstellt));
+
+      kopf.appendChild(
+        el('span', 'w-ankauf-meta', meta.join(' · '))
+      );
+
+      inhalt.appendChild(kopf);
+
+      var kontakt = el('p', 'w-ankauf-meta');
+
+      if (e.telefon) {
+        var tel = el('a', '', String(e.telefon));
+        tel.href = 'tel:' + String(e.telefon).replace(/\s+/g, '');
+        kontakt.appendChild(tel);
+      }
+
+      if (e.telefon && e.email) {
+        kontakt.appendChild(document.createTextNode(' · '));
+      }
+
+      if (e.email) {
+        var mail = el('a', '', String(e.email));
+        mail.href = 'mailto:' + String(e.email);
+        kontakt.appendChild(mail);
+      }
+
+      if (kontakt.childNodes.length) {
+        inhalt.appendChild(kontakt);
+      }
+
+      var einzelheiten = [];
+
+      if (e.fahrzeug) einzelheiten.push('Fahrzeug: ' + e.fahrzeug);
+      if (e.anliegen) einzelheiten.push('Anliegen: ' + e.anliegen);
+      if (e.zeitfenster) einzelheiten.push('Zeitfenster: ' + e.zeitfenster);
+
+      if (e.art === 'newsletter') {
+        einzelheiten.push(
+          e.consent ? 'Newsletter-Einwilligung: ja' : 'Newsletter-Einwilligung: nein'
+        );
+      }
+
+      if (einzelheiten.length) {
+        inhalt.appendChild(
+          el('p', 'w-ankauf-meta', einzelheiten.join(' · '))
+        );
+      }
+
+      if (e.nachricht) {
+        inhalt.appendChild(
+          el('p', 'w-ankauf-text', String(e.nachricht))
+        );
+      }
+
+      karte.appendChild(inhalt);
+
+      var aktion = el('div', 'w-ankauf-aktion');
+      var loeschen = el('button', 'w-knopf ist-gefahr w-klein', 'Löschen');
+      loeschen.type = 'button';
+      loeschen.setAttribute('aria-label', anfrageArtName(e.art) + ' löschen');
+
+      loeschen.addEventListener('click', function () {
+        loescheAnfrage(String(e.id || ''), karte);
+      });
+
+      aktion.appendChild(loeschen);
+      karte.appendChild(aktion);
+
+      liste.appendChild(karte);
+    });
+  }
+
+  function loescheAnfrage(id, karte) {
+    if (!id) {
+      zeigeAnfragenFehler('Löschen fehlgeschlagen.');
+      return;
+    }
+
+    if (!window.confirm('Diese Anfrage wirklich endgültig löschen?')) return;
+
+    var knopf = karte.querySelector('button');
+    if (knopf) knopf.disabled = true;
+
+    anfrage('/api/formulare?id=' + encodeURIComponent(id), {
+      method: 'DELETE'
+    })
+      .then(function (daten) {
+        if (!daten.ok) {
+          if (knopf) knopf.disabled = false;
+          zeigeAnfragenFehler(daten.fehler || 'Löschen fehlgeschlagen.');
+          return;
+        }
+
+        if (karte.parentNode) karte.parentNode.removeChild(karte);
+        $('anfragen-leer').hidden = $('anfragen-liste').children.length > 0;
+        ladeAnfragen();
+      })
+      .catch(function () {
+        if (knopf) knopf.disabled = false;
+        zeigeAnfragenFehler('Der Wartungsbereich antwortet nicht.');
+      });
+  }
+
+  function ladeAnfragen() {
+    $('anfragen-hinweis').hidden = false;
+    $('anfragen-fehler').hidden = true;
+
+    anfrage('/api/formulare', { method: 'GET' })
+      .then(function (daten) {
+        if (!daten.ok) {
+          zeigeAnfragenFehler(
+            daten.fehler || 'Die Anfragen konnten nicht geladen werden.'
+          );
+          return;
+        }
+
+        anfragenGeladen = true;
+        zeichneAnfragen(daten);
+      })
+      .catch(function () {
+        zeigeAnfragenFehler('Der Wartungsbereich antwortet nicht.');
+      });
+  }
   /* ================= Los ================= */
 
   zeigeArt();
