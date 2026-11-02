@@ -1,0 +1,8 @@
+{
+  "_hinweis": "Notnagel der Ankündigung für die Startseite. Er wird NUR gelesen, wenn /api/veroeffentlicht nicht antwortet. aktiv=true zeigt ihn an, solange er nicht abgelaufen ist (bis in der Vergangenheit); ein von in der Zukunft verhindert die Anzeige NICHT, es steuert nur den roten Öffnungsstatus (v142). text = kurzer Text (max. ~60 Zeichen, sonst wird er abgeschnitten), zusatz = optionaler zweiter Text rechts vom Logo.",
+  "aktiv": false,
+  "text": "",
+  "zusatz": "",
+  "von": "",
+  "bis": ""
+}

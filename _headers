@@ -1,0 +1,35 @@
+# v144: Bilder sind unveraenderlich — ohne diese Datei liefert Netlify ALLES mit
+# "Cache-Control: public,max-age=0,must-revalidate" aus. Der Browser laedt Logo und
+# Fotos dann bei jedem Seitenwechsel erneut (bzw. fragt sie neu an), obwohl sie sich
+# nie aendern. Sieben Tage Laufzeit sparen bei jedem weiteren Aufruf rund 2 MB.
+#
+# v151 (2026-09-26): Sicherheits-Header GLOBAL zuerst. Die Cache-Regeln darunter
+# setzen nur Cache-Control und lassen die Sicherheits-Header unberuehrt.
+#
+# Bekannte Einschraenkung: script-src und style-src brauchen 'unsafe-inline', weil
+# alle Seiten ihr JavaScript inline tragen und Stile inline vorkommen. Ein Hash- oder
+# Nonce-Ansatz waere strenger, verlangt aber externe Skripte/Stile — eigener Auftrag.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=()
+# img-src: CloudFront fuer Netlify-Forms-Fotos (Ankauf-Reiter). Wenn Netlify die Domain aendert, hier nachziehen.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://d33wubrfki0l68.cloudfront.net; font-src 'self'; connect-src 'self' https://api.counterapi.dev; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+
+# Cache-Regeln: HTML und Ankuendigung immer nachfragen, stil.css kurz, /api/* nie speichern.
+# Absichtlich NICHT gecacht: die HTML-Seiten (aendern sich mit jeder Version), /api/*
+# und ankuendigung.json (werden zur Laufzeit gefuellt).
+/
+  Cache-Control: no-cache, must-revalidate
+/*.html
+  Cache-Control: no-cache, must-revalidate
+/stil.css
+  Cache-Control: public, max-age=300, must-revalidate
+/ankuendigung.json
+  Cache-Control: no-cache, must-revalidate
+/api/*
+  Cache-Control: no-store
+
+# Unveraendert seit v144: Bilder sieben Tage.
+/bilder/*
+  Cache-Control: public, max-age=604800

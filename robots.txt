@@ -1,0 +1,9 @@
+# Autocentrum Halle - erzeugt von _bau/bau.mjs (v114)
+# TESTINSTANZ auf netlify.app: fuer Suchmaschinen gesperrt.
+User-agent: *
+Disallow: /
+
+# Vor dem Live-Gang auf der echten Domain stattdessen diese Zeilen benutzen:
+# Allow: /
+# Disallow: /wartung/    (der Wartungsbereich gehoert nie in Suchmaschinen)
+# Sitemap: https://www.autocentrum-halle.de/sitemap.xml

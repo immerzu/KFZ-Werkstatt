@@ -1,0 +1,1906 @@
+  :root {
+    --farbe-dunkel: #1c2536;
+    /* v88: Logorot statt Orange. Alle Akzent-Elemente (Zahlen, Links,
+       Buttons, Icons, Pfeile) tragen jetzt das Rot des Firmenlogos. */
+    --farbe-akzent: #e30613;
+    --farbe-akzent-dunkel: #b00510;
+    --farbe-bg: #f7f8fa;
+    --farbe-rand: #dfe3ea;
+    --farbe-text: #1c2536;
+    --farbe-text-gedaempft: #4a5568;
+    --farbe-rot: #b00020;
+    --farbe-gruen: #1f8a4d;
+    --radius: 8px;
+    --schatten: 0 1px 2px rgba(28, 37, 54, 0.06), 0 4px 12px rgba(28, 37, 54, 0.04);
+    --sticky-hoehe: 100px;
+    /* v92/v93: Reserve fuer die Kopfzeile — NUR fuer die Hoehenberechnung des Inhalts
+       und als Platz unter der festen Kopfzeile. Sie wird im Normalzustand der
+       Kopfzeile gemessen und aendert sich beim Zusammenklappen NICHT. Der Wert hier
+       ist nur der Startwert bis das Skript gemessen hat (Desktop ≈ Kontaktleiste +
+       Kopfzeile). */
+    --kopf-reserve: 184px;
+    /* v97: Hoehe der EINGEKLAPPTEN Kopfzeile (Logo weg, nur Kontaktleiste +
+       Navigation). Wird im Skript gemessen und ist der Bezug fuer
+       scroll-padding-top: Seit v97 klappt die Kopfzeile auch beim Klick auf eine
+       Rubrik ein, also landen Anker unter der SCHMALEN Leiste. */
+    --kopf-kompakt: 86px;
+    --notleiste-hoehe: 0px;
+    --bild-max-hoehe: max(20rem, calc(100vh - var(--kopf-reserve) - 14rem));
+    --rubrik-hoehe: max(18rem, calc(100vh - var(--kopf-reserve) - 2rem));
+    --marke-zeilenhoehe: 2.325rem;
+    --logo-hoehe: 5.009rem;
+  }
+
+  /* v98: Auf allen Seiten ausser der Startseite ist die Kopfzeile dauerhaft schmal
+     (Logo weg) — die Klasse "unterseite" setzt der Generator am <html>-Element.
+     Die Werte hier sind Startwerte, bis das Skript in messeKopfReserve() nachmisst;
+     sie verhindern, dass der Inhalt beim Laden erst nachrutscht. */
+  html.unterseite {
+    --kopf-reserve: 86px;
+    --kopf-kompakt: 86px;
+  }
+
+  @supports (height: 100dvh) {
+    :root {
+      --bild-max-hoehe: max(20rem, calc(100dvh - var(--kopf-reserve) - 14rem));
+      --rubrik-hoehe: max(18rem, calc(100dvh - var(--kopf-reserve) - 2rem));
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    /* v97: Bezug ist die EINGEKLAPPTE Kopfzeile — nach einem Klick auf eine Rubrik
+       ist die Leiste schmal (Logo weg), und genau darunter soll die Rubrik beginnen.
+       Vorher (v93–v96) stand hier --kopf-reserve, weil die Kopfzeile beim Klick
+       bewusst gross blieb. Layoutneutral: scroll-padding-top veraendert nur die
+       Anker-Landung, keine Inhaltshoehen. */
+    scroll-padding-top: var(--kopf-kompakt);
+    scroll-padding-bottom: var(--notleiste-hoehe, 0px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--farbe-text);
+    background: var(--farbe-bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 { line-height: 1.25; margin: 0 0 0.5em; color: var(--farbe-dunkel); }
+  h1 { font-size: clamp(1.6rem, 3.5vw, 2.25rem); }
+  h2 { font-size: clamp(1.35rem, 2.6vw, 1.75rem); margin-top: 0; }
+  h3 { font-size: 1.05rem; margin-top: 1em; }
+  p { margin: 0 0 0.75em; }
+  a { color: var(--farbe-akzent); }
+  a:focus-visible, button:focus-visible {
+    outline: 3px solid var(--farbe-akzent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .sr-only {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link {
+    position: absolute;
+    top: -100px;
+    left: 0.5rem;
+    z-index: 400;
+    padding: 0.6rem 1rem;
+    background: var(--farbe-dunkel);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 0 0 var(--radius) var(--radius);
+    transition: top 0.2s ease;
+  }
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    top: 0;
+    outline: 3px solid var(--farbe-akzent);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skip-link { transition: none; }
+  }
+
+  figure { margin: 0; }
+  img { display: block; max-width: 100%; height: auto; }
+
+  .sticky-bereich {
+    /* v93: Die Kopfzeile liegt NICHT mehr im Dokumentfluss, sondern fest über dem
+       Inhalt. Ihr Platz wird einmalig durch den Innenabstand von `main` reserviert
+       (--kopf-reserve, konstant). Dadurch verändert das Zusammenklappen die
+       Seitenhöhe nicht mehr — der Inhalt bleibt beim Scrollen stehen, statt um die
+       Höhendifferenz zu springen. */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    overflow-anchor: none;
+  }
+
+  .kontaktleiste {
+    background: var(--farbe-dunkel);
+    color: #fff;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+  }
+  .kontaktleiste-inhalt {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .kontaktleiste a { color: #fff; text-decoration: none; }
+  .kontaktleiste a:hover { text-decoration: underline; }
+  .kontaktleiste .trenner { opacity: 0.4; }
+  .kontaktleiste .symbol { margin-right: 0.25em; }
+/* v146: Symbole sind eingebettete SVGs (Telefon, Standort) bzw. das vorhandene
+   WhatsApp-Logo — vorher waren es Emoji-Zeichen (☎ 💬 📍). Emojis sahen je nach
+   Betriebssystem anders aus oder fehlten als leeres Kaestchen; ein SVG nimmt die
+   Textfarbe des Knopfes an (currentColor) und ist auf jedem Geraet scharf. */
+.svg-symbol {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.125em;
+  fill: currentColor;
+}
+
+  .kopfzeile {
+    background: #fff;
+    border-bottom: 1px solid var(--farbe-rand);
+    box-shadow: var(--schatten);
+  }
+  .kopfzeile-inhalt {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    text-align: center;
+    transition: gap 0.25s ease, padding 0.25s ease;
+  }
+
+  .marke {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    height: var(--marke-zeilenhoehe);
+    max-height: var(--marke-zeilenhoehe);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: visible;
+    opacity: 1;
+    transition: max-height 0.25s ease, height 0.25s ease, opacity 0.2s ease;
+  }
+  .marke img {
+    display: block;
+    height: var(--logo-hoehe);
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  .sticky-bereich.kompakt .marke,
+  .sticky-bereich.ohne-logo .marke {
+    max-height: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* v101: Nur zum MESSEN der Kopfzeilen-Höhen. Ohne das liefert offsetHeight
+     direkt nach dem Setzen der Klasse "kompakt" noch die GROSSE Höhe, weil die
+     0,25-s-Transition gerade erst startet — --kopf-kompakt wäre dann 184 statt
+     86 px und jeder Ankersprung landete 98 px zu tief. */
+  .sticky-bereich.ohne-uebergang,
+  .sticky-bereich.ohne-uebergang * {
+    transition: none !important;
+  }
+  .sticky-bereich.kompakt .kopfzeile-inhalt,
+  .sticky-bereich.ohne-logo .kopfzeile-inhalt {
+    gap: 0;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marke,
+    .kopfzeile-inhalt {
+      transition: none;
+    }
+  }
+
+  .hauptnav {
+    width: 100%;
+  }
+
+  .hauptnav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    align-items: center;
+    justify-content: center;
+  }
+  .hauptnav a {
+    color: var(--farbe-dunkel);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.25rem 0;
+    border-bottom: 2px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    white-space: nowrap;
+  }
+  .hauptnav a:hover { border-bottom-color: var(--farbe-akzent); }
+
+  /* v88: Besucherzähler in der Navigation. Zahl in Logorot, Beschriftung
+     wie die übrigen Navigations-Einträge dunkel. */
+  .nav-zaehler {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    color: var(--farbe-dunkel);
+    font-weight: 500;
+    padding: 0.25rem 0;
+    white-space: nowrap;
+    line-height: 1;
+  }
+  .nav-zaehler .zaehler-zahl {
+    color: var(--farbe-akzent);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    /* v93: Reserve für die feste Kopfzeile. --kopf-reserve ist die Höhe im
+       Normalzustand und ändert sich beim Scrollen nicht — deshalb bleibt der
+       Inhalt an Ort und Stelle, wenn die Kopfzeile zusammenklappt. */
+    padding: var(--kopf-reserve) 1rem 5rem;
+  }
+
+  .karte {
+    background: #fff;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    box-shadow: var(--schatten);
+    padding: clamp(0.8rem, calc(0.35rem + 1.6vh), 1.5rem);
+    margin: 0.75rem 0;
+    min-height: var(--rubrik-hoehe);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .karte::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("bilder/werkstatt-aussen.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.20;
+    z-index: -2;
+    pointer-events: none;
+  }
+
+  .karte::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.35);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .karte > h2,
+  .karte > p {
+    text-shadow:
+      0 1px 2px rgba(255, 255, 255, 0.95),
+      0 0 6px rgba(255, 255, 255, 0.75);
+  }
+
+  /* v107: Auch die Abstände unter Überschrift und Einleitung richten sich nach der
+     Fensterhöhe — das kommt allen Superkacheln zugute, nicht nur den Leistungen. */
+  .karte > h2 { margin-bottom: clamp(0.35rem, calc(0.1rem + 0.8vh), 0.85rem); }
+  .karte > p { margin-bottom: clamp(0.3rem, calc(0.1rem + 0.6vh), 0.75rem); }
+
+  .karte-text-lesbar {
+    background: rgba(255, 255, 255, 0.82);
+    border-radius: var(--radius);
+    padding: clamp(1rem, 2.5vw, 1.75rem);
+    text-align: center;
+    max-width: 780px;
+    margin: 0 auto;
+    box-shadow: 0 1px 2px rgba(28, 37, 54, 0.04);
+  }
+  .karte-text-lesbar h2 {
+    text-shadow: none;
+    margin-bottom: 0.6em;
+  }
+  .karte-text-lesbar p {
+    text-shadow: none;
+    margin-bottom: 0.6em;
+  }
+  .karte-text-lesbar p:last-child {
+    margin-bottom: 0;
+  }
+
+  .hero {
+    background: #fff;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    box-shadow: var(--schatten);
+    padding: clamp(0.8rem, calc(0.35rem + 1.6vh), 1.5rem);
+    margin: 1.25rem 0 0.75rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: clamp(1rem, 2vw, 1.75rem);
+    align-items: center;
+    min-height: var(--rubrik-hoehe);
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    --hero-parallax: 0px;
+  }
+
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    top: -48px;
+    bottom: -48px;
+    background-image: url("bilder/werkstatt-aussen.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.20;
+    z-index: -2;
+    pointer-events: none;
+    transform: translateY(var(--hero-parallax));
+    will-change: transform;
+  }
+
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.35);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  @media (min-width: 820px) {
+    .hero { grid-template-columns: 1.1fr 0.9fr; }
+  }
+
+  .hero-text {
+    min-width: 0;
+    position: relative;
+    /* v149 (Nutzerentscheidung „B"): Der Textblock beginnt OBEN in der Kachel statt
+       vertikal zentriert. Vorher schwebte die Statusanzeige auf dem Rechner 120–163 px
+       unter der Kacheloberkante (mobil war es mit 20 px unauffällig), weil .hero ein
+       Grid mit align-items: center und min-height: var(--rubrik-hoehe) ist und der
+       Textblock neben dem Foto zentriert wurde. Das Foto rechts bleibt zentriert. */
+    align-self: start;
+  }
+
+  /* v150 (Nutzerauftrag „genauer vermitteln, dynamisch"): Der Textblock füllt die
+     Kachelhöhe und VERTEILT seinen Inhalt. Vorher (v149) stand er oben — der
+     Überschuss der Kachelhöhe (min-height: --rubrik-hoehe, das Foto ist kleiner)
+     sammelte sich komplett UNTEN: gemessen 19–21 px oben gegen 200–306 px unten.
+     gap ist ein Mindestabstand; space-between verteilt nur den Rest, der wirklich
+     übrig ist. Nur ab 820 px — mobil stehen Text und Bild untereinander, dort
+     bleibt alles unverändert. */
+  @media (min-width: 820px) {
+    .hero-text {
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .hero-text > * { margin-top: 0; margin-bottom: 0; }
+  }
+
+  .hero h1 {
+    margin-bottom: 0.4em;
+    text-shadow:
+      0 1px 2px rgba(255, 255, 255, 0.95),
+      0 0 6px rgba(255, 255, 255, 0.75);
+  }
+  .hero p.lead {
+    font-size: 1.05rem;
+    color: var(--farbe-text-gedaempft);
+    margin-bottom: 1em;
+    text-shadow:
+      0 1px 2px rgba(255, 255, 255, 0.95),
+      0 0 6px rgba(255, 255, 255, 0.75);
+  }
+
+  .cta-reihe {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+    margin: 1rem 0 0;
+    max-width: 26rem;
+  }
+  @media (min-width: 520px) {
+    .cta-reihe {
+      grid-template-columns: 1fr 1fr;
+    }
+    .cta-reihe > .btn:nth-child(3) {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (min-width: 780px) {
+    .cta-reihe {
+      grid-template-columns: repeat(3, 1fr);
+      max-width: 34rem;
+    }
+    .cta-reihe > .btn:nth-child(3) {
+      grid-column: auto;
+    }
+  }
+
+  .hero-telefon {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 1.25rem 0 0;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--farbe-rand);
+    font-size: 1rem;
+    color: var(--farbe-text-gedaempft);
+    text-shadow:
+      0 1px 2px rgba(255, 255, 255, 0.95),
+      0 0 6px rgba(255, 255, 255, 0.75);
+  }
+  .hero-telefon .anruf-symbol {
+    font-size: 1.15rem;
+    line-height: 1;
+    color: var(--farbe-akzent);
+    transform: translateY(2px);
+  }
+  .hero-telefon a {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--farbe-akzent);
+    text-decoration: none;
+    letter-spacing: 0.01em;
+  }
+  .hero-telefon a:hover { text-decoration: underline; }
+
+  @media (max-width: 480px) {
+    .hero-telefon {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.15rem;
+    }
+    .hero-telefon .anruf-symbol { display: none; }
+  }
+
+  .hero-bild {
+    margin: 0;
+    width: fit-content;
+    max-width: 100%;
+    justify-self: center;
+    background: transparent;
+    border: 0;
+    position: relative;
+    align-self: center;
+  }
+  .hero-bild img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: min(58vh, 520px);
+    border-radius: var(--radius);
+    transform: scale(1.05);
+    transform-origin: center;
+    transition: transform 1.05s cubic-bezier(.2, .7, .3, 1);
+  }
+  .hero-bild img.ist-sichtbar {
+    transform: scale(1);
+  }
+
+  .btn {
+    display: inline-block;
+    background: var(--farbe-akzent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.7rem 1rem;
+    border-radius: var(--radius);
+    border: 2px solid var(--farbe-akzent);
+    font-size: 1rem;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.25;
+  }
+  .btn:hover { background: var(--farbe-akzent-dunkel); border-color: var(--farbe-akzent-dunkel); }
+  .btn-zweit {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--farbe-dunkel);
+    border: 2px solid var(--farbe-dunkel);
+  }
+  .btn-zweit:hover {
+    background: #fff;
+    border-color: var(--farbe-akzent);
+    color: var(--farbe-akzent);
+  }
+  .btn-whatsapp {
+    background: #1f8a4d;
+    border-color: #1f8a4d;
+    color: #fff;
+  }
+  .btn-whatsapp:hover { background: #176b3a; border-color: #176b3a; }
+
+  .btn-whatsapp {
+    position: relative;
+    padding-right: 3rem;
+  }
+  .btn-whatsapp .btn-logo {
+    position: absolute;
+    top: 50%;
+    left: calc(50% + 2.1rem);
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    display: block;
+  }
+  @media (max-width: 560px) {
+    .btn-whatsapp { padding-right: 2.7rem; }
+    .btn-whatsapp .btn-logo {
+      left: calc(50% + 1.95rem);
+      width: 20px;
+      height: 20px;
+    }
+  }
+  .btn-iks {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--farbe-dunkel);
+    border: 2px solid var(--farbe-dunkel);
+    font-size: 0.92rem;
+    padding: 0.55rem 0.9rem;
+  }
+  .btn-iks:hover {
+    background: #fff;
+    border-color: var(--farbe-akzent);
+    color: var(--farbe-akzent);
+  }
+
+  .status-badge {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.87rem;
+    font-weight: 600;
+    background: #eef0f3;
+    color: #4a5568;
+    border: 1px solid var(--farbe-rand);
+    margin: 0 0 1em;
+  }
+  .status-badge .status-punkt {
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: #8a94a3;
+    flex: 0 0 auto;
+  }
+  .status-badge.ist-offen {
+    background: #e6f4ec;
+    color: #14622e;
+    border-color: #b5d6bf;
+  }
+  .status-badge.ist-offen .status-punkt { background: var(--farbe-gruen); }
+  .status-badge.ist-zu {
+    background: #f4ecec;
+    color: #7a2a2a;
+    border-color: #d8b8b8;
+  }
+  .status-badge.ist-zu .status-punkt { background: #8a3c3c; }
+
+  .werkstatt-bild {
+    margin-top: 0.75rem;
+    border: 0;
+    background: transparent;
+    text-align: center;
+  }
+  .werkstatt-bild a.werkstatt-bild-link {
+    /* v95: block statt inline-block. In einem inline-block hängt die Breite vom
+       Inhalt ab, Prozentwerte darunter sind zyklisch und werden verworfen — die
+       Bildbox wäre vor dem Laden 0 px hoch. Schatten/Anheben hängen deshalb am
+       Bild, nicht am Link (siehe unten). */
+    display: block;
+    width: 100%;
+    line-height: 0;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    /* v95: Der Link ist jetzt ein Block in voller Breite — der Hover-Effekt muss
+       am Bild hängen, sonst umfasst der Schatten die ganze Kartenbreite. */
+    .werkstatt-bild a.werkstatt-bild-link:hover img {
+      box-shadow: 0 8px 28px rgba(28, 37, 54, 0.22);
+      transform: translateY(-2px);
+    }
+  }
+  .werkstatt-bild a.werkstatt-bild-link:focus-visible {
+    outline: 3px solid var(--farbe-akzent);
+    outline-offset: 3px;
+  }
+  .werkstatt-bild img {
+    display: block;
+    /* v95: Breite und Höhe stehen jetzt schon VOR dem Laden fest. Vorher war die
+       Box des lazy geladenen Bildes 0 px hoch (und auf kontakt.html über die
+       Höhenbegrenzung sogar verzerrt); beim Nachladen wuchs die Kachel um 16 px,
+       und ein angesprungenes Ankerziel rutschte nach unten — oben blieb der untere
+       Rand der vorherigen Kachel stehen. Die Breite ergibt sich aus dem Container
+       (begrenzt durch --bild-max-hoehe * 4/3), die Höhe aus dem Seitenverhältnis.
+       Beide Markup-Varianten (mit und ohne umschließenden Link) sind damit
+       abgedeckt. Optisch unverändert. */
+    width: min(100%, calc(var(--bild-max-hoehe) * 4 / 3));
+    max-width: 100%;
+    max-height: var(--bild-max-hoehe);
+    height: auto;
+    /* v93: Seitenverhältnis fest reservieren. Das Bild wird lazy geladen; ohne diese
+       Angabe war seine Box vor dem Laden 0 px hoch und die Seite wuchs beim Laden
+       nachträglich (Sprung). */
+    aspect-ratio: 1600 / 1200;
+    margin-inline: auto;
+    border-radius: var(--radius);
+    transition:
+      transform 0.35s cubic-bezier(.2, .7, .3, 1),
+      box-shadow 0.35s cubic-bezier(.2, .7, .3, 1);
+  }
+  .werkstatt-bild figcaption {
+    font-size: 0.85rem;
+    color: var(--farbe-text-gedaempft);
+    padding: 0.6rem 1rem 0;
+    background: transparent;
+    border: 0;
+    text-align: left;
+    text-shadow:
+      0 1px 2px rgba(255, 255, 255, 0.95),
+      0 0 6px rgba(255, 255, 255, 0.75);
+  }
+  .werkstatt-bild figcaption a.werkstatt-text-link {
+    color: var(--farbe-text-gedaempft);
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(74, 85, 104, 0.45);
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .werkstatt-bild figcaption a.werkstatt-text-link:hover,
+  .werkstatt-bild figcaption a.werkstatt-text-link:focus-visible {
+    color: var(--farbe-akzent);
+    border-bottom-color: var(--farbe-akzent);
+    border-bottom-style: solid;
+  }
+  .werkstatt-pin {
+    margin-right: 0.25em;
+    font-size: 1em;
+    line-height: 1;
+    display: inline-block;
+    transform: translateY(1px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .werkstatt-bild a.werkstatt-bild-link,
+    .werkstatt-bild figcaption a.werkstatt-text-link {
+      transition: none;
+    }
+    .werkstatt-bild a.werkstatt-bild-link:hover { transform: none; }
+  }
+
+  /* v107: Kacheln und Abstände richten sich nach der FENSTERHÖHE. Jede .karte ist
+     eine "Superkachel" und soll nach dem Klick auf ihren Reiter möglichst komplett
+     sichtbar sein — in kurzen Fenstern (Laptop 1280x580) schrumpfen Kacheln und
+     Abstände mit, in hohen Fenstern werden sie wieder luftig. Die Untergrenzen in
+     clamp() halten die Schrift lesbar, die Obergrenzen sind die früheren Festwerte. */
+  .leistungen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    grid-auto-rows: 1fr;
+    align-items: stretch;
+    gap: clamp(0.4rem, calc(0.2rem + 0.8vh), 0.75rem);
+    margin-top: clamp(0.35rem, calc(0.15rem + 0.6vh), 0.75rem);
+  }
+  .leistung {
+    background: #fff;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    padding: clamp(0.35rem, calc(0.15rem + 0.85vh), 0.75rem) clamp(0.6rem, 1.1vw, 0.9rem);
+    box-shadow: var(--schatten);
+    display: flex;
+    flex-direction: column;
+  }
+  .leistung h3 {
+    margin-top: 0;
+    font-size: clamp(0.85rem, calc(0.62rem + 0.5vh), 0.98rem);
+    line-height: 1.2;
+    margin-bottom: 0.2em;
+  }
+  .leistung p {
+    margin: 0;
+    color: var(--farbe-text-gedaempft);
+    font-size: clamp(0.75rem, calc(0.58rem + 0.55vh), 0.9rem);
+    line-height: 1.3;
+  }
+  .kachel-mehr {
+    display: block;
+    margin-top: clamp(0.15rem, calc(0.05rem + 0.4vh), 0.5rem);
+    font-size: clamp(0.72rem, calc(0.6rem + 0.4vh), 0.88rem);
+  }
+
+  .leistung-symbol {
+    margin-top: auto;
+    padding-top: clamp(0.25rem, calc(0.1rem + 0.5vh), 0.9rem);
+    display: flex;
+    justify-content: center;
+    color: var(--farbe-akzent);
+    /* v89: Symbole in voller Deckkraft — sie sollen das kräftige Logorot
+       (#e30613) zeigen, nicht das blasse 55-%-Rot. */
+    opacity: 1;
+  }
+  .leistung-symbol svg {
+    width: clamp(24px, calc(16px + 2.2vh), 48px);
+    height: clamp(24px, calc(16px + 2.2vh), 48px);
+    display: block;
+  }
+
+  /* v106: In der Anruf-Kachel der Startseite stehen Telefonnummer und Öffnungszeiten
+     untereinander, und "Mo-Fr 08:00-17:00 Uhr" wird nicht mehr mitten im Wochentag
+     umbrochen (vorher: "0345 - 678 66 91 Mo-" / "Fr 08:00-17:00 Uhr").
+     Grund: Die beiden Regeln oben hängen an .leistung-cta (Altlast aus dem One-Pager),
+     die Kachel selbst trägt aber nur die Klasse .leistung — sie griffen also nicht. */
+  .leistungen .cta-nummer { display: block; }
+  .leistungen .cta-zeiten {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+  }
+
+  @media (max-width: 640px) {
+  }
+
+  /* v106: In der Öffnungszeiten-Rubrik der Startseite stehen Überschrift und
+     Livestatus mittig in der Kachel (die Tabelle darunter bleibt linksbündig). */
+  #oeffnungszeiten > h2 { text-align: center; }
+  #oeffnungszeiten > .status-badge {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .oeffnungstabelle {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem;
+  }
+  .oeffnungstabelle th, .oeffnungstabelle td {
+    text-align: left;
+    padding: 0.35rem 0.6rem;
+    border-bottom: 1px solid var(--farbe-rand);
+    font-size: 0.95rem;
+  }
+  .oeffnungstabelle th { font-weight: 600; color: var(--farbe-dunkel); width: 40%; }
+  .oeffnungstabelle tr:last-child th,
+  .oeffnungstabelle tr:last-child td { border-bottom: 0; }
+  .status-zu { color: var(--farbe-rot); font-weight: 600; }
+
+  .karte .oeffnungstabelle th,
+  .karte .oeffnungstabelle td {
+    background: rgba(255, 255, 255, 0.85);
+  }
+  .karte .oeffnungstabelle tr:last-child th,
+  .karte .oeffnungstabelle tr:last-child td {
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+  }
+  .karte .oeffnungstabelle tr:first-child th,
+  .karte .oeffnungstabelle tr:first-child td {
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+  }
+
+  .notiz {
+    margin-top: 0.75rem;
+    font-size: 0.88rem;
+    color: var(--farbe-text-gedaempft);
+    text-shadow:
+      0 1px 2px rgba(255, 255, 255, 0.95),
+      0 0 6px rgba(255, 255, 255, 0.75);
+  }
+  .notiz a {
+    color: var(--farbe-akzent);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .notiz a:hover { text-decoration: underline; }
+
+  .kontakt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+  .kontakt-block {
+    background: #fff;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+    box-shadow: var(--schatten);
+  }
+  .kontakt-block h3 { margin-top: 0; margin-bottom: 0.35em; }
+  .kontakt-block p { margin: 0 0 0.4em; font-size: 0.95rem; }
+
+  /* v106: Im Öffnungszeiten-Block der Kontaktseite steht der Livestatus als normale
+     Zeile — sein Text beginnt jetzt auf derselben Kante wie Überschrift und Zeiten.
+     Vorher war er eine Pille mit Punkt und Innenabstand, dadurch setzte sein Text
+     rund 30 px weiter rechts an als der übrige Text der Kachel.
+     Die Statusfarbe (gruen bzw. rot) traegt die Aussage weiterhin. */
+  .kontakt-block .status-badge {
+    display: block;
+    width: auto;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .kontakt-block .status-badge .status-punkt { display: none; }
+
+  .kontakt-block a {
+    color: var(--farbe-akzent);
+    text-decoration: none;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+  }
+  .kontakt-block a:hover { text-decoration: underline; }
+
+  .kontakt-block a.btn,
+  .kontakt-block a.btn-iks,
+  .kontakt-block a.btn-zweit,
+  .kontakt-block a.btn-whatsapp {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+    text-align: left;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    color: var(--farbe-akzent);
+  }
+  .kontakt-block a.btn:hover,
+  .kontakt-block a.btn-iks:hover,
+  .kontakt-block a.btn-zweit:hover,
+  .kontakt-block a.btn-whatsapp:hover {
+    background: transparent;
+    border: 0;
+    color: var(--farbe-akzent-dunkel);
+    text-decoration: underline;
+  }
+
+  .faq-liste {
+    /* v107: Auch die FAQ richtet sich nach der Fensterhöhe — zehn Einträge sollen in
+       kurzen Fenstern ebenso komplett sichtbar sein wie die Leistungs-Kacheln. */
+    margin-top: clamp(0.4rem, calc(0.2rem + 0.6vh), 0.75rem);
+  }
+  .faq-item {
+    background: #fff;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    margin: clamp(0.15rem, calc(0.05rem + 0.35vh), 0.5rem) 0;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: var(--schatten);
+  }
+  .faq-item > summary {
+    cursor: pointer;
+    padding: clamp(0.35rem, calc(0.15rem + 0.7vh), 0.9rem) clamp(0.6rem, 1.2vw, 1rem);
+    font-size: clamp(0.85rem, calc(0.66rem + 0.45vh), 1rem);
+    font-weight: 600;
+    color: var(--farbe-dunkel);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .faq-item > summary::after {
+    content: "+";
+    font-size: 1.3rem;
+    color: var(--farbe-akzent);
+    line-height: 1;
+    font-weight: 400;
+    flex: 0 0 auto;
+  }
+  .faq-item[open] > summary::after {
+    content: "−";
+  }
+  .faq-item > summary::-webkit-details-marker { display: none; }
+  .faq-item > summary:hover { color: var(--farbe-akzent); }
+  .faq-item .faq-antwort {
+    /* v96: Die Höhe animiert das Skript (weiches Auf-/Zuklappen). Ohne
+       JavaScript bleibt <details> unverändert nutzbar — die Transition greift
+       nur, wenn das Skript die Klasse "ist-animiert" gesetzt hat. */
+    overflow: hidden;
+    height: auto;
+  }
+  .faq-item.ist-animiert .faq-antwort {
+    transition: height 0.28s cubic-bezier(.4, 0, .2, 1);
+  }
+  .faq-item .faq-antwort-inhalt {
+    padding: 0 1rem 1rem;
+    color: var(--farbe-text-gedaempft);
+    font-size: 0.95rem;
+  }
+  .faq-item .faq-antwort-inhalt p:last-child { margin-bottom: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .faq-item.ist-animiert .faq-antwort { transition: none; }
+  }
+
+  .formular {
+    display: grid;
+    gap: 0.9rem;
+    max-width: 640px;
+    margin: 0.5rem auto 0;
+  }
+  .formular label {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--farbe-dunkel);
+  }
+  .formular label > span { display: block; margin-bottom: 0.3rem; }
+  .formular .pflicht { color: var(--farbe-rot); }
+  .formular input,
+  .formular select,
+  .formular textarea {
+    display: block;
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 1rem;
+    background: #fff;
+    color: var(--farbe-text);
+  }
+  .formular input:focus,
+  .formular select:focus,
+  .formular textarea:focus {
+    outline: 3px solid var(--farbe-akzent);
+    outline-offset: 1px;
+    border-color: var(--farbe-akzent);
+  }
+  .formular textarea { min-height: 8rem; resize: vertical; }
+  /* v151 (2026-09-26): Datei-Felder (Fahrzeugankauf), Feldhinweis, Feldfehler und Vorschau. */
+  .formular input[type="file"] {
+    padding: 0.45rem 0.5rem;
+    background: #fff;
+    font-size: 0.92rem;
+    font-weight: 400;
+  }
+  .formular .feld-hinweis {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--farbe-text-gedaempft);
+  }
+  .formular .feld-fehler {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--farbe-rot);
+  }
+  .formular .foto-vorschau {
+    display: block;
+    margin-top: 0.5rem;
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+  }
+  /* v151 (2026-09-26): Newsletter im Fussbereich — dezent, einzeilig, ohne eigene Ueberschrift. */
+  .newsletter-formular {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.6rem;
+    align-items: center;
+    justify-content: center;
+    margin: 0.9rem 0 0.2rem;
+    font-size: 0.85rem;
+  }
+  .newsletter-formular label { font-weight: 400; }
+  .newsletter-formular input[type="email"],
+  .newsletter-formular input[type="text"] {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 0.85rem;
+    background: #fff;
+    color: var(--farbe-text);
+  }
+  .newsletter-formular input:focus,
+  .newsletter-formular input:focus-visible {
+    outline: 3px solid var(--farbe-akzent);
+    outline-offset: 1px;
+  }
+  .newsletter-formular .newsletter-consent {
+    flex: 1 1 100%;
+    display: flex;
+    gap: 0.45rem;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: left;
+  }
+  .newsletter-formular .newsletter-consent input { margin-top: 0.15rem; }
+  .newsletter-formular .newsletter-consent a { color: var(--farbe-akzent); }
+  .formular .formular-hinweis {
+    font-size: 0.85rem;
+    color: var(--farbe-text-gedaempft);
+    grid-column: 1 / -1;
+  }
+  .formular .formular-hinweis a { color: var(--farbe-akzent); }
+  /* v151 (2026-09-26): gilt jetzt fuer alle Formulare (auch den Newsletter im Fussbereich). */
+  .honeypot-feld {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .zurueck-button {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 200;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--farbe-dunkel);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.7rem 1rem;
+    border-radius: 999px;
+    box-shadow: 0 6px 20px rgba(28, 37, 54, 0.25);
+    font-size: 0.92rem;
+  }
+  .zurueck-button:hover { background: var(--farbe-akzent); }
+  .zurueck-button .pfeil { font-size: 1.05rem; line-height: 1; }
+
+  .anker-oben {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .kopfzeile-zeile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .menue-schalter { display: none; }
+  .mobil-menue { display: none; }
+
+  .notleiste {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 150;
+    background: #fff;
+    border-top: 1px solid var(--farbe-rand);
+    box-shadow: 0 -4px 16px rgba(28, 37, 54, 0.12);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .notleiste-inhalt {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0.4rem 0.5rem;
+  }
+  .notleiste a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    min-height: 52px;
+    padding: 0.4rem 0.25rem;
+    border: 2px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    background: #fff;
+    color: var(--farbe-dunkel);
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+  }
+  .notleiste a:focus-visible {
+    outline: 3px solid var(--farbe-akzent);
+    outline-offset: 2px;
+  }
+  /* v146: Die drei Symbole sind Zeichen, keine Bilder — seit v146 Telefon und Route als
+     eingebettetes SVG, WhatsApp als vorhandenes Logo. Ein Emoji haette je nach Geraet
+     anders ausgesehen (oder als leeres Kaestchen gefehlt). Die Groesse ist fest, damit
+     die Notleiste ihre 65 px behaelt; die Farbe kommt aus dem Knopf (currentColor). */
+  .notleiste .nl-symbol {
+    font-size: 1.05rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+  }
+  .notleiste .nl-symbol svg,
+  .notleiste .nl-symbol img {
+    width: 22px;
+    height: 22px;
+    display: block;
+    fill: currentColor;
+  }
+  .notleiste .nl-anruf {
+    background: var(--farbe-akzent);
+    border-color: var(--farbe-akzent);
+    color: #fff;
+  }
+  .notleiste .nl-whatsapp {
+    background: var(--farbe-gruen);
+    border-color: var(--farbe-gruen);
+    color: #fff;
+  }
+  .notleiste .nl-route {
+    background: var(--farbe-dunkel);
+    border-color: var(--farbe-dunkel);
+    color: #fff;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .notleiste .nl-anruf:hover { background: var(--farbe-akzent-dunkel); border-color: var(--farbe-akzent-dunkel); }
+    .notleiste .nl-whatsapp:hover { background: #176b3a; border-color: #176b3a; }
+    .notleiste .nl-route:hover { background: #0f1725; border-color: #0f1725; }
+  }
+
+  footer {
+    background: var(--farbe-dunkel);
+    color: #cfd6e0;
+    font-size: 0.88rem;
+    padding: 1.25rem 1rem;
+    text-align: center;
+  }
+  footer a { color: #fff; }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 0.65s cubic-bezier(.2, .7, .3, 1),
+      transform 0.65s cubic-bezier(.2, .7, .3, 1);
+    will-change: opacity, transform;
+  }
+  .reveal.ist-sichtbar {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+      will-change: auto;
+    }
+    .hero::before {
+      transform: none;
+      top: 0;
+      bottom: 0;
+    }
+    .hero-bild img {
+      transform: none;
+      transition: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    :root {
+      --bild-max-hoehe: none;
+      --rubrik-hoehe: auto;
+    }
+    .zurueck-button {
+      padding: 0.7rem;
+      width: 3rem;
+      height: 3rem;
+      justify-content: center;
+    }
+    .zurueck-button .beschriftung { display: none; }
+    .kontaktleiste-inhalt { font-size: 0.82rem; }
+    .hero-bild { max-width: 100%; }
+    .hero-bild img { max-height: none; width: 100%; }
+    .werkstatt-bild img { width: 100%; }
+  }
+
+  /* v107: Diese Ausnahme ist fuer HANDYS im Querformat gedacht (dort ist einfach kein
+     Platz fuer die eine-Bildschirm-hohen Rubriken). Sie darf aber kein Laptop-Fenster
+     treffen: Ein 1280x580-Fenster ist ebenfalls "landscape" und <= 600px hoch, und
+     ohne die Bildbegrenzung wurde die Werkstatt-Rubrik dort 947 px hoch statt 500.
+     Darum zusaetzlich auf schmale Geraete begrenzt. */
+  @media (orientation: landscape) and (max-height: 600px) and (max-width: 1024px) {
+    :root {
+      --bild-max-hoehe: none;
+      --rubrik-hoehe: auto;
+    }
+    .hero {
+      min-height: auto;
+      padding: 0.75rem 1rem;
+    }
+    .karte {
+      min-height: auto;
+    }
+    .hero-bild img {
+      max-height: 55vh;
+    }
+  }
+
+  @media (max-width: 640px) {
+    :root {
+      --sticky-hoehe: 46px;
+      --kopf-reserve: 65px;
+      /* v97: eingeklappte Kopfzeile auf dem Handy (wird vom Skript gemessen). */
+      --kopf-kompakt: 54px;
+      --notleiste-hoehe: 60px;
+      --marke-zeilenhoehe: 1.86rem;
+      --logo-hoehe: 3.340rem;
+    }
+
+    /* v98: Unterseiten starten auch auf dem Handy mit der schmalen Leiste. */
+    html.unterseite {
+      --kopf-reserve: 54px;
+      --kopf-kompakt: 54px;
+    }
+
+    .kontaktleiste { display: none; }
+
+    .kopfzeile-inhalt {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.35rem 0.75rem;
+    }
+    .kopfzeile-zeile {
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .marke {
+      align-self: center;
+    }
+
+    .hauptnav { display: none; }
+
+    .menue-schalter {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.45rem 0.7rem;
+      background: #fff;
+      border: 2px solid var(--farbe-dunkel);
+      border-radius: var(--radius);
+      color: var(--farbe-dunkel);
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .menue-schalter:focus-visible {
+      outline: 3px solid var(--farbe-akzent);
+      outline-offset: 2px;
+    }
+    .menue-icon {
+      display: block;
+      width: 16px;
+      height: 2px;
+      background: currentColor;
+      box-shadow: 0 -5px 0 currentColor, 0 5px 0 currentColor;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .menue-schalter[aria-expanded="true"] .menue-icon {
+      box-shadow: 0 0 0 transparent, 0 0 0 transparent;
+      transform: rotate(45deg);
+    }
+    .menue-schalter[aria-expanded="true"] .menue-icon::after {
+      content: "";
+      display: block;
+      width: 16px;
+      height: 2px;
+      background: currentColor;
+      transform: rotate(90deg);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .menue-icon { transition: none; }
+    }
+
+    .mobil-menue {
+      display: block;
+      border-top: 1px solid var(--farbe-rand);
+      background: #fff;
+      max-height: 70vh;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+    .mobil-menue[hidden] { display: none; }
+    .mobil-menue ul {
+      list-style: none;
+      margin: 0;
+      padding: 0.35rem 0.75rem 0.6rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .mobil-menue a {
+      display: block;
+      padding: 0.75rem 0.25rem;
+      border-bottom: 1px solid var(--farbe-rand);
+      color: var(--farbe-dunkel);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      text-align: left;
+    }
+    .mobil-menue a:focus-visible {
+      outline: 3px solid var(--farbe-akzent);
+      outline-offset: -3px;
+      border-radius: 4px;
+    }
+    .mobil-menue li:last-child a { border-bottom: 0; }
+    .mobil-menue .menue-recht a {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--farbe-text-gedaempft);
+    }
+
+    .sticky-bereich.kompakt .marke {
+      max-height: var(--marke-zeilenhoehe);
+      height: var(--marke-zeilenhoehe);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* v98: Auf Unterseiten bleibt das Logo auch auf dem Handy verborgen —
+       dort behaelt die eingeklappte Leiste sonst das Logo (Zeile darueber). */
+    .sticky-bereich.ohne-logo .marke {
+      max-height: 0;
+      height: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    main { padding-bottom: calc(5rem + var(--notleiste-hoehe)); }
+    footer { padding-bottom: calc(1.25rem + var(--notleiste-hoehe)); }
+
+    .zurueck-button {
+      bottom: calc(var(--notleiste-hoehe) + env(safe-area-inset-bottom, 0px) + 12px);
+      right: 12px;
+    }
+
+    .notleiste { display: block; }
+  }
+
+  /* ===========================================================
+     v90: Mehrseitige Fassung — Stile der neuen Bausteine
+     (v91: Firmenlogo wieder in v89-Größe, siehe unten)
+     =========================================================== */
+
+  /* Aktiver Navigationspunkt */
+  .hauptnav a.nav-aktiv,
+  .mobil-menue a.nav-aktiv {
+    border-bottom-color: var(--farbe-akzent);
+    color: var(--farbe-akzent);
+  }
+  .mobil-menue a.nav-aktiv { border-bottom-color: var(--farbe-rand); }
+
+  /* Seitenkopf einer Unterseite */
+  .seitenkopf {
+    background: #fff;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    box-shadow: var(--schatten);
+    padding: 1.25rem 1.25rem 1.1rem;
+    margin-bottom: 0.85rem;
+  }
+  .seitenkopf .brotkrumen {
+    font-size: 0.84rem;
+    color: var(--farbe-text-gedaempft);
+    margin: 0 0 0.5rem;
+  }
+  .seitenkopf .brotkrumen a { color: var(--farbe-akzent); text-decoration: none; }
+  .seitenkopf .brotkrumen a:hover { text-decoration: underline; }
+  .seitenkopf h1 { margin: 0 0 0.4rem; }
+  .seitenkopf .lead { margin: 0 0 0.9rem; color: var(--farbe-text-gedaempft); }
+
+  /* Zwei Spalten: Text + Bild auf Leistungsseiten */
+  .leistung-seite {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+  @media (min-width: 820px) {
+    .leistung-seite { grid-template-columns: 1.05fr 0.95fr; align-items: start; }
+  }
+  .leistung-seite figure { margin: 0; }
+  .leistung-seite img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--farbe-rand);
+    display: block;
+  }
+  .leistung-seite figcaption {
+    font-size: 0.85rem;
+    color: var(--farbe-text-gedaempft);
+    padding-top: 0.4rem;
+  }
+
+  /* Detail-Liste („Das gehört dazu“) */
+  .detail-liste {
+    list-style: none;
+    margin: 0.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 0.35rem 1.25rem;
+  }
+  .detail-liste li {
+    position: relative;
+    padding-left: 1.15rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--farbe-text);
+  }
+  .detail-liste li::before {
+    content: "▪";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--farbe-akzent);
+    font-weight: 700;
+  }
+  .detail-hinweis {
+    display: block;
+    margin-top: 0.9rem;
+    font-size: 0.95rem;
+    color: var(--farbe-text);
+  }
+  .detail-hinweis strong { color: var(--farbe-dunkel); }
+
+  /* Handlungsreihe auf Unterseiten */
+  .aktionen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin: 1rem 0 0.25rem;
+  }
+
+  /* Weitere Leistungen */
+  .weitere-liste {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 0.5rem;
+  }
+  .weitere-liste a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    background: #fff;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    color: var(--farbe-dunkel);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .weitere-liste a:hover { border-color: var(--farbe-akzent); color: var(--farbe-akzent); }
+  .weitere-liste .pfeil { color: var(--farbe-akzent); }
+
+  /* ===========================================================
+     v111: „Weitere Leistungen“ — Überschrift links oben, darunter die
+     Rubriken-Buttons (eine Spalte), rechts das Werkstattbild.
+     Gilt NUR in der breiten Ansicht (ab 820px). Die Mobilansicht bleibt
+     unverändert: dort ist das Bild ausgeblendet und die Button-Liste
+     liegt wie bisher im Raster.
+
+     Achtung: h2 und ul stecken jetzt in einem Wrapper. Damit sich in der
+     schmalen Ansicht nichts verschiebt, sind die Wrapper Flex-Spalten
+     (dadurch kein Margin-Collapse — genau wie vorher als Flex-Kinder von
+     .karte), und die Regeln des Selektors ".karte > h2" werden hier
+     wiederholt, weil er den verschachtelten h2 nicht mehr trifft.
+     =========================================================== */
+  .weitere-bereich {
+    display: flex;
+    flex-direction: column;
+  }
+  .weitere-text {
+    display: flex;
+    flex-direction: column;
+  }
+  .weitere-bereich h2 {
+    margin-bottom: clamp(0.35rem, calc(0.1rem + 0.8vh), 0.85rem);
+    text-shadow:
+      0 1px 2px rgba(255, 255, 255, 0.95),
+      0 0 6px rgba(255, 255, 255, 0.75);
+  }
+  .weitere-bild { display: none; }
+
+  @media (min-width: 820px) {
+    .weitere-bereich {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 0.85rem;
+      align-items: start;
+    }
+    .weitere-bereich .weitere-liste { grid-template-columns: 1fr; }
+    .weitere-bild {
+      display: block;
+      margin: 0;
+    }
+    .weitere-bild img {
+      width: 100%;
+      height: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--farbe-rand);
+      display: block;
+    }
+    .weitere-bild figcaption {
+      font-size: 0.85rem;
+      color: var(--farbe-text-gedaempft);
+      padding-top: 0.4rem;
+    }
+  }
+
+  /* Leistungs-Kacheln als Links (Startseite + Übersicht) */
+  a.leistung {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.35s cubic-bezier(.2, .7, .3, 1),
+                box-shadow 0.35s cubic-bezier(.2, .7, .3, 1),
+                border-color 0.35s ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    a.leistung:hover {
+      transform: perspective(800px) translateZ(-10px) scale(0.985);
+      box-shadow: 0 1px 2px rgba(28, 37, 54, 0.12), inset 0 3px 10px rgba(28, 37, 54, 0.10);
+      border-color: var(--farbe-akzent);
+    }
+  }
+  a.leistung .kachel-mehr {
+    margin-top: 0.5rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--farbe-akzent);
+  }
+  a.leistung .kachel-mehr::after { content: " →"; }
+
+  /* Datenschutz-/Rechtstext auf eigener Seite */
+  .rechts-seite h3 {
+    color: var(--farbe-dunkel);
+    margin: 1.2em 0 0.35em;
+    font-size: 1rem;
+  }
+  .rechts-seite h3:first-child { margin-top: 0; }
+  .rechts-seite p { margin: 0 0 0.7em; }
+  .rechts-seite ul { margin: 0 0 0.7em; padding-left: 1.25rem; }
+  .rechts-seite a { color: var(--farbe-akzent); }
+
+  /* v91: Firmenlogo wieder in der Größe aus v89 (--logo-hoehe).
+     In v90 war es auf --marke-zeilenhoehe begrenzt und dadurch kleiner.
+
+     v94: Das Logo wird auf Nutzerwunsch um 20 % vergrößert.
+     Entscheidend: Die MARKENZEILE behält ihre bisherige Höhe (--logo-hoehe) —
+     nur das Bild wächst und steht per overflow: visible oben und unten ein
+     Stück über. Dadurch bleibt die Kopfzeile (und damit die Navigationsleiste)
+     exakt gleich hoch; der Innenabstand der Kopfzeile gibt dem Logo den Platz.
+
+     v109: Auf Nutzerwunsch NOCHMALS 20 % größer (1,2 × 1,2 = 1,44) — wiederum
+     ausschließlich über den Faktor am BILD. --logo-hoehe bleibt unangetastet,
+     denn sie ist hier die Höhe der Markenzeile: Wer sie ändert, vergrößert die
+     Navbar. Der zusätzliche Platz kommt aus dem Bild selbst — die Logodatei hat
+     oben 24,5 % und unten 25,7 % durchsichtigen Rand, sichtbar ist nur die
+     mittlere Hälfte. Deshalb darf der Bildrahmen in Kontaktleiste und Navigation
+     hineinragen, ohne dass etwas Sichtbares kollidiert.
+     Gemessen (v109 gegen v108): Logo 96 → 115 px (Desktop) bzw. 64 → 77 px
+     (mobil), Kopfbereich unverändert 184 / 65 px, Navigation an derselben
+     Position, kein waagerechter Überstand. */
+  .marke {
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    height: var(--logo-hoehe);
+    max-height: var(--logo-hoehe);
+  }
+  .marke img {
+    height: calc(var(--logo-hoehe) * 1.44);
+    max-height: none;
+    width: auto;
+    object-position: left center;
+  }
+  @media (max-width: 640px) {
+    .marke img { object-position: left center; }
+  }
+
+  /* ==== v113: Ankündigung (Betriebsferien, Urlaub, Krankheit) ====
+     Sie erscheint an drei Stellen: links und rechts der Marke (nur Startseite,
+     nur breite Ansicht), in der Kontaktleiste statt der festen Zeiten und statt
+     des Öffnungsstatus. Ohne aktive Ankündigung ist alles wie vorher. */
+  .ankuendigung-links,
+  .ankuendigung-rechts {
+    display: none;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--farbe-akzent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .ankuendigung-links { text-align: right; }
+  .ankuendigung-rechts { text-align: left; }
+
+  /* Erst ab 900 px ist neben der Marke genug Platz. Erst dann darf aus der
+     Flex-Zeile ein Raster werden – sonst verschiebt sich die mittige Marke. */
+  @media (min-width: 900px) {
+    .kopfzeile-zeile.mit-ankuendigung {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+    }
+    .ankuendigung-links,
+    .ankuendigung-rechts { display: block; }
+  }
+
+  /* Der Status trägt die Ankündigung: ruhiger roter Hinweis statt grün/rot */
+  .status-badge.ist-ankuendigung {
+    background: #fdecec;
+    color: #8f1119;
+    border-color: #f0b9bc;
+  }
+  .status-badge.ist-ankuendigung .status-punkt { background: var(--farbe-akzent); }
+  .status-badge.ist-ankuendigung .status-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ==== v118: Betriebsferien-Hinweis im Hero ====
+     Der Admin trägt den jeweils aktuellen Text im Wartungsbereich ein; er erscheint
+     hier rechts oben im Hero (links vom Foto). Zeilenumbrüche aus dem Formular
+     bleiben dank white-space: pre-line erhalten. Ohne Eintrag ist der Block weg. */
+  .hero-hinweis {
+    width: fit-content;
+    max-width: 24rem;
+    margin: 0 0 0.75rem auto;
+    padding: 0.6rem 0.85rem;
+    background: #fdecec;
+    border: 1px solid #f0b9bc;
+    border-left: 4px solid var(--farbe-akzent);
+    border-radius: var(--radius);
+    color: #8f1119;
+    font-size: clamp(0.88rem, calc(0.82rem + 0.2vh), 0.98rem);
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: pre-line;
+  }
+  @media (max-width: 819px) {
+    /* Am Handy steht der Hinweis über der ganzen Breite, damit nichts gequetscht wird. */
+    .hero-hinweis { margin-left: 0; max-width: none; }
+  }
+
+  /* ==== v118: Kachel-Überschriften links ausrichten ====
+     „Aktuelles" und „Öffnungszeiten" sollen ihre Bezeichnung oben links tragen wie
+     die übrigen Superkacheln — bei Öffnungszeiten rückt auch der Live-Status unter
+     die Bezeichnung. */
+  #aktuelles > h2,
+  #oeffnungszeiten > h2 {
+    text-align: left;
+    width: 100%;
+  }
+  /* ==== v120: Der Öffnungsstatus bleibt echt — der Urlaubshinweis steht daneben ====
+     Das Status-Abzeichen zeigt IMMER, ob gerade offen ist (grün/rot). Eine geplante
+     Betriebsferien oder ein Urlaub erscheint als eigener Hinweis daneben und darf die
+     Aussage, ob jetzt offen ist, nicht ersetzen. */
+  .status-zeile {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    /* v148: Die Zeile braucht einen eigenen Abstand nach unten. Die Regel
+       .status-zeile > * setzt den Rand der Chips auf 0 (damit zwei Chips
+       nebeneinander sauber sitzen) — damit war auch der 1em-Abstand des
+       Status-Badges weg und die Anzeige klebte mit 0 px am H1. */
+    margin-bottom: 0.9rem;
+  }
+  .status-zeile > * { margin-top: 0; margin-bottom: 0; }
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.7rem;
+    background: #fff5e5;
+    border: 1px solid #f0cf9a;
+    border-radius: 999px;
+    color: #8a5a00;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .hinweis-chip { color: #8a5a00; font-weight: 600; }
+
+  /* ==== v124: Ankündigung am Handy ====
+     Am Handy ist die Kontaktleiste ausgeblendet und neben dem Logo ist kein Platz.
+     Deshalb erscheint die Ankündigung als eigene Zeile oben im Kopfbereich — sie ist
+     damit beim Öffnen der Seite sofort sichtbar. Am Rechner bleibt der Streifen aus
+     (dort stehen Text und Zusatz links und rechts vom Logo). */
+  .mobil-ankuendigung { display: none; }
+  @media (max-width: 640px) {
+    .mobil-ankuendigung {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      margin: 0.4rem 0 0;
+      padding-top: 0.4rem;
+      border-top: 1px solid #f0b9bc;
+      color: #8f1119;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .mobil-ankuendigung .symbol { flex: 0 0 auto; }
+    .mobil-ankuendigung[hidden] { display: none !important; }
+  }
+
+  /* ==== v114: „Aktuelles" (News aus dem Wartungsbereich) ====
+     Die Karte steht zwischen Hero und Leistungen, ist im Markup aber versteckt
+     und wird erst durch das Skript eingeblendet, wenn es Meldungen gibt. Ohne
+     Meldungen — und auch ganz ohne JavaScript — sieht die Startseite deshalb
+     exakt aus wie vorher. */
+  .aktuelles-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    display: grid;
+    gap: clamp(0.8rem, calc(0.5rem + 0.6vh), 1.2rem);
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  }
+  .aktuelles-eintrag {
+    background: #fff;
+    border: 1px solid var(--farbe-rand);
+    border-left: 4px solid var(--farbe-akzent);
+    border-radius: var(--radius);
+    box-shadow: var(--schatten);
+    padding: clamp(0.8rem, calc(0.5rem + 0.7vh), 1.15rem);
+    /* v132: Flex-Spalte, damit das Veröffentlichungsdatum unten rechts sitzen kann
+       (margin-top: auto im Datumsabsatz). Die Kachel bleibt gleich hoch, weil die
+       Rasterzeile die Höhe vorgibt. */
+    display: flex;
+    flex-direction: column;
+  }
+  .aktuelles-eintrag h3 {
+    margin: 0 0 0.35rem;
+    font-size: clamp(1rem, calc(0.9rem + 0.35vh), 1.15rem);
+  }
+  .aktuelles-eintrag p {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .aktuelles-zeitraum {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    color: var(--farbe-text-gedaempft);
+  }
+  /* v132: Veröffentlichungsdatum unten rechts in der Kachel. Der Selektor nennt die
+     Kachel mit, weil ".aktuelles-eintrag p { margin: 0 }" sonst gewinnt (eine Klasse
+     plus Element schlägt eine einzelne Klasse) und "margin-top: auto" verschwindet. */
+  .aktuelles-eintrag .aktuelles-veroeffentlicht {
+    margin: auto 0 0;
+    padding-top: 0.55rem;
+    align-self: flex-end;
+    text-align: right;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    color: var(--farbe-text-gedaempft);
+  }
+  .aktuelles-leer {
+    margin: 0;
+    color: var(--farbe-text-gedaempft);
+  }
+  /* v143: Betriebsferien und Krankheit stehen als volle Zeilen UNTEREINANDER — der
+     Betreiber kann mehrere Zeiträume ankündigen (Herbst- und Winterferien). Dafür
+     spannt die Kachel über alle Spalten des Rasters; die News darunter bleiben im
+     Raster. Laufende Ferien erkennt man am kräftigeren Streifen. */
+  .aktuelles-eintrag.ist-ankuendigung {
+    grid-column: 1 / -1;
+    border-left-width: 6px;
+  }
+  .aktuelles-eintrag.ist-ankuendigung > p:first-child {
+    font-weight: 600;
+  }
+  .aktuelles-eintrag.ist-ankuendigung.ist-laufend {
+    border-left-color: var(--farbe-rot);
+  }
