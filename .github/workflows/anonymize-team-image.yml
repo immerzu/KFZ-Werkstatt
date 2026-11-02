@@ -1,0 +1,41 @@
+name: Teamfoto anonymisieren
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  anonymisieren:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: ImageMagick installieren
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: Gesichter verpixeln
+        shell: bash
+        run: |
+          set -euo pipefail
+          bild="bilder/team-autocentrum-halle.jpg"
+          cp "$bild" "$bild.tmp.jpg"
+          convert "$bild.tmp.jpg" \
+            \( +clone -crop 170x190+225+430 +repage -resize 10% -filter point -resize 1000% \) -geometry +225+430 -composite \
+            \( +clone -crop 190x230+390+385 +repage -resize 10% -filter point -resize 1000% \) -geometry +390+385 -composite \
+            \( +clone -crop 55x65+705+505 +repage -resize 10% -filter point -resize 1000% \) -geometry +705+505 -composite \
+            -quality 90 "$bild"
+          rm -f "$bild.tmp.jpg"
+
+      - name: Änderung committen
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bilder/team-autocentrum-halle.jpg
+          git diff --cached --quiet && exit 0
+          git commit -m "Teamfoto anonymisieren"
+          git push
