@@ -2,6 +2,11 @@ name: Teamfoto anonymisieren
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/anonymize-team-image.yml
 
 permissions:
   contents: write
