@@ -1,5 +1,5 @@
 # Autocentrum Halle - erzeugt von _bau/bau.mjs (v114)
-# TESTINSTANZ auf netlify.app: fuer Suchmaschinen gesperrt.
+# Website bis zur erneuten öffentlichen Freigabe für Suchmaschinen gesperrt.
 User-agent: *
 Disallow: /
 
