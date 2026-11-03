@@ -1435,9 +1435,9 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; width: 0; ma
   }
 
   /* ================= Ankauf: nur ansehen =================
-     v151 (2026-09-27): Die Einreichungen kommen aus /api/ankauf (Netlify Forms über
-     die Function ankauf-liste). Kein Bearbeiten, kein Löschen, keine Statusfelder.
-     Felder ip, user_agent und referrer werden bewusst nicht angezeigt. */
+     Fahrzeug-Ankaufsanfragen und Fotos werden über /api/ankauf aus
+     Cloudflare D1 geladen. Kein Bearbeiten; beim Löschen werden Anfrage
+     und zugehörige Fotos entfernt. */
 
   function ankaufZeit(iso) {
     var roh = String(iso || '');

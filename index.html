@@ -1436,77 +1436,6 @@
       window.addEventListener('hashchange', beiScroll);
       aktualisiere();
     }
-
-    /* ==== v151 (2026-09-26): Fahrzeugankauf — Groessenpruefung und lokale Vorschau ====
-       Netlify Forms nimmt je Feld EINE Datei und hoechstens 8 MB pro POST an; hier gilt
-       je Bild 2 MB. Zu grosse Bilder werden beim Absenden abgefangen (preventDefault +
-       Feldfehler). Die Vorschau laeuft ueber URL.createObjectURL und wird nach dem
-       Laden wieder freigegeben. */
-    function initialisiereFormularPruefung() {
-      var formular = document.querySelector('form[name="ankauf"]');
-      if (!formular) return;
-      var grenze = 2000000;
-      var felder = ['foto_front', 'foto_heck', 'foto_schaden'];
-
-      function fehlerZeigen(feld, text) {
-        var kasten = feld.parentNode;
-        if (!kasten) return;
-        var alt = kasten.querySelector('.feld-fehler');
-        if (alt) alt.parentNode.removeChild(alt);
-        if (!text) return;
-        var meldung = document.createElement('span');
-        meldung.className = 'feld-fehler';
-        meldung.setAttribute('role', 'alert');
-        meldung.textContent = text;
-        kasten.appendChild(meldung);
-      }
-
-      function vorschauZeigen(feld, name, datei) {
-        var bild = formular.querySelector('[data-vorschau="' + name + '"]');
-        if (!bild) return;
-        if (bild.getAttribute('data-url')) {
-          URL.revokeObjectURL(bild.getAttribute('data-url'));
-          bild.removeAttribute('data-url');
-          bild.removeAttribute('src');
-        }
-        if (!datei) { bild.hidden = true; return; }
-        var url = URL.createObjectURL(datei);
-        bild.setAttribute('data-url', url);
-        bild.onload = function () {
-          var offen = bild.getAttribute('data-url');
-          if (offen) { URL.revokeObjectURL(offen); bild.removeAttribute('data-url'); }
-        };
-        bild.src = url;
-        bild.hidden = false;
-      }
-
-      felder.forEach(function (name) {
-        var feld = formular.elements.namedItem(name);
-        if (!feld) return;
-        feld.addEventListener('change', function () {
-          var datei = feld.files && feld.files[0];
-          fehlerZeigen(feld, datei && datei.size > grenze ? 'Das Bild ist groesser als 2 MB.' : '');
-          vorschauZeigen(feld, name, datei);
-        });
-      });
-
-      formular.addEventListener('submit', function (ereignis) {
-        var zuGross = false;
-        felder.forEach(function (name) {
-          var feld = formular.elements.namedItem(name);
-          var datei = feld && feld.files && feld.files[0];
-          if (datei && datei.size > grenze) {
-            zuGross = true;
-            fehlerZeigen(feld, 'Das Bild ist groesser als 2 MB.');
-          }
-        });
-        if (zuGross) {
-          ereignis.preventDefault();
-          var erste = formular.querySelector('.feld-fehler');
-          if (erste && erste.scrollIntoView) erste.scrollIntoView({ block: 'center' });
-        }
-      });
-    }
     bereiteStaffelungVor();
     initialisiereReveal();
     initialisiereZoom();
@@ -1514,7 +1443,6 @@
     initialisiereAufrufezaehler();
     initialisiereAnkuendigung();
     initialisiereRubrikMarkierung();
-    initialisiereFormularPruefung();
   })();
 </script>
 
