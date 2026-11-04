@@ -1748,30 +1748,6 @@
     text-overflow: ellipsis;
   }
 
-  /* ==== v118: Betriebsferien-Hinweis im Hero ====
-     Der Admin trägt den jeweils aktuellen Text im Wartungsbereich ein; er erscheint
-     hier rechts oben im Hero (links vom Foto). Zeilenumbrüche aus dem Formular
-     bleiben dank white-space: pre-line erhalten. Ohne Eintrag ist der Block weg. */
-  .hero-hinweis {
-    width: fit-content;
-    max-width: 24rem;
-    margin: 0 0 0.75rem auto;
-    padding: 0.6rem 0.85rem;
-    background: #fdecec;
-    border: 1px solid #f0b9bc;
-    border-left: 4px solid var(--farbe-akzent);
-    border-radius: var(--radius);
-    color: #8f1119;
-    font-size: clamp(0.88rem, calc(0.82rem + 0.2vh), 0.98rem);
-    font-weight: 600;
-    line-height: 1.4;
-    white-space: pre-line;
-  }
-  @media (max-width: 819px) {
-    /* Am Handy steht der Hinweis über der ganzen Breite, damit nichts gequetscht wird. */
-    .hero-hinweis { margin-left: 0; max-width: none; }
-  }
-
   /* ==== v118: Kachel-Überschriften links ausrichten ====
      „Aktuelles" und „Öffnungszeiten" sollen ihre Bezeichnung oben links tragen wie
      die übrigen Superkacheln — bei Öffnungszeiten rückt auch der Live-Status unter
@@ -1797,19 +1773,6 @@
     margin-bottom: 0.9rem;
   }
   .status-zeile > * { margin-top: 0; margin-bottom: 0; }
-  .status-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.35rem 0.7rem;
-    background: #fff5e5;
-    border: 1px solid #f0cf9a;
-    border-radius: 999px;
-    color: #8a5a00;
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-  .hinweis-chip { color: #8a5a00; font-weight: 600; }
-
   /* ==== v124: Ankündigung am Handy ====
      Am Handy ist die Kontaktleiste ausgeblendet und neben dem Logo ist kein Platz.
      Deshalb erscheint die Ankündigung als eigene Zeile oben im Kopfbereich — sie ist
