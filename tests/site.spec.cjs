@@ -87,6 +87,21 @@ test('Startseite, Aktuelles und Screenshot', async ({ page }, testInfo) => {
   await expect(page.locator('#hero-titel')).toBeVisible();
   await expect(page.locator('#aktuelles')).toBeVisible();
   await expect(page.locator('#aktuelles .aktuelles-eintrag', { hasText: 'CI-Pruefmeldung' })).toHaveCount(1);
+  // Volle Bildschirmhoehe allein aktiviert keine Lazy-Bilder/Reveal-Animationen.
+  // Daher jeden Abschnitt real besuchen, erst danach den Ganzseiten-Screenshot.
+  await page.evaluate(async () => {
+    const html = document.documentElement;
+    const alt = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    const schritt = Math.max(400, Math.floor(window.innerHeight * 0.8));
+    for (let y = 0; y < html.scrollHeight; y += schritt) {
+      window.scrollTo(0, y);
+      await new Promise(resolve => setTimeout(resolve, 120));
+    }
+    await new Promise(resolve => setTimeout(resolve, 350));
+    window.scrollTo(0, 0);
+    html.style.scrollBehavior = alt;
+  });
   await testInfo.attach('startseite-' + testInfo.project.name, {
     body: await page.screenshot({ fullPage: true, animations: 'disabled' }),
     contentType: 'image/png'
